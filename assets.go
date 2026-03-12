@@ -150,3 +150,15 @@ func gcd(a, b int) int {
 	return a
 }
 
+func processVideoForFastStart(filePath string) (string, error) {
+	outFile := filePath + ".processing"
+	cmd := exec.Command("ffmpeg", "-i", filePath, "-c", "copy", "-movflags", "faststart", "-f", "mp4", outFile)
+
+	out := new(bytes.Buffer)
+	cmd.Stdout = out
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("unable to run command: %w", err)
+	}
+
+	return outFile, nil
+}

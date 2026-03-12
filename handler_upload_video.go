@@ -102,13 +102,27 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	fastStartVideo, err := processVideoForFastStart(tmp.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't convert to faststart", err)
+		return
+	}
+	defer os.Remove(fastStartVideo)
+
+	file, err := os.Open(fastStartVideo)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't open faststart video", err)
+		return
+	}
+	defer file.Close()
+
 	key := aspect + "/" + createFileName(mediaType)
 	log.Println(key)
 
 	_, err = cfg.s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket:      aws.String(cfg.s3Bucket),
 		Key:         aws.String(key),
-		Body:        tmp,
+		Body:        file,
 		ContentType: aws.String(mediaType),
 	})
 	if err != nil {
