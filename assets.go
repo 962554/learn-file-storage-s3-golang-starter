@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (cfg apiConfig) ensureAssetsDir() error {
+func (cfg *apiConfig) ensureAssetsDir() error {
 	if _, err := os.Stat(cfg.assetsRoot); os.IsNotExist(err) {
 		return os.Mkdir(cfg.assetsRoot, 0o755)
 	}
@@ -28,6 +28,6 @@ func createFileName(mediaType string) string {
 	return base + "." + ext
 }
 
-func (cfg apiConfig) createAsset(mediaType string) string {
+func (cfg *apiConfig) createAsset(mediaType string) string {
 	return filepath.Join(cfg.assetsRoot, createFileName(mediaType))
 }
