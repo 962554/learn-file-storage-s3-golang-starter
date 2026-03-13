@@ -139,17 +139,6 @@ func getVideoAspectRatio(filePath string) (string, error) {
 	}
 }
 
-// greatest common divisor (gcd) via Euclidean algorithm
-// Ref: https://go.dev/play/p/SmzvkDjYlb
-func gcd(a, b int) int {
-	for b != 0 {
-		t := b
-		b = a % b
-		a = t
-	}
-	return a
-}
-
 func processVideoForFastStart(filePath string) (string, error) {
 	outFile := filePath + ".processing"
 	cmd := exec.Command("ffmpeg", "-i", filePath, "-c", "copy", "-movflags", "faststart", "-f", "mp4", outFile)
