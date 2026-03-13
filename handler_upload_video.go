@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"mime"
 	"net/http"
 	"os"
+	"os/exec"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -140,4 +144,49 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondWithJSON(w, http.StatusOK, struct{}{})
+}
+
+func getVideoAspectRatio(filePath string) (string, error) {
+	cmd := exec.Command("ffprobe", "-v", "error", "-print_format", "json", "-show_streams", filePath)
+	out := new(bytes.Buffer)
+	cmd.Stdout = out
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("unable to run command: %w", err)
+	}
+
+	var vidDetails struct {
+		Streams []struct {
+			Width  int `json:"width,omitempty"`
+			Height int `json:"height,omitempty"`
+		} `json:"streams"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &vidDetails); err != nil {
+		return "", fmt.Errorf("unable to marshal to JSON: %w", err)
+	}
+
+	stream0 := vidDetails.Streams[0]
+	width, height := stream0.Width, stream0.Height
+	ratio := fmt.Sprintf("%.2f", float32(width)/float32(height))
+
+	switch ratio {
+	case "1.78":
+		return "16:9", nil
+	case "0.56":
+		return "9:16", nil
+	default:
+		return "other", nil
+	}
+}
+
+func processVideoForFastStart(filePath string) (string, error) {
+	outFile := filePath + ".processing"
+	cmd := exec.Command("ffmpeg", "-i", filePath, "-c", "copy", "-movflags", "faststart", "-f", "mp4", outFile)
+
+	out := new(bytes.Buffer)
+	cmd.Stdout = out
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("unable to run command: %w", err)
+	}
+
+	return outFile, nil
 }
